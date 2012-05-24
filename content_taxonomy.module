@@ -538,3 +538,49 @@ function content_taxonomy_content_diff_values($node, $field, $items) {
   }
   return $return;
 }
+
+/**
+ * Implementation of hook_taxonomy_manager_term
+ */
+function content_taxonomy_taxonomy_manager_term($op, $arg0 = NULL, $arg1 = NULL, $arg2 = NULL) {
+  switch($op) {
+    case 'merge':
+      $new = $arg0;
+      $old = $arg1;
+      $types = content_types();
+        foreach(content_fields() as $fieldname => $fieldinfo) {
+        if ($fieldinfo['type']=='content_taxonomy') {
+          foreach($types as $type=>$info) {
+            if ($info['fields'][$fieldname]) {
+              if ($info['tables']['content_'.$fieldname]) {
+                $table = 'content_' . $fieldname;
+              }
+              else {
+                $table = _content_tablename($type, CONTENT_DB_STORAGE_PER_CONTENT_TYPE);
+              }
+              $dbfield = $fieldname . '_value';
+
+              if (!db_result(db_query("SELECT vid from {$table} where $dbfield=%d LIMIT 1",$old))) continue;
+              db_query("UPDATE {$table} SET $dbfield=%d where $dbfield=%d",array($new,$old));
+              //cleanup
+              $vids = array();
+              if ($fieldinfo['multiple'] > 0) {
+                $query = "SELECT vid from {$table} where $dbfield=%d GROUP by vid, $dbfield having count(delta) > 1";
+                $result =db_query($query,$new);
+                while ($row = db_fetch_object($result)) {
+                  $result2 = db_query("SELECT delta from  {$table} where $dbfield=%d AND vid=%d ",array($new,$row->vid));
+                  while ($delta = db_fetch_object($result2)) {
+                    if (!in_array($row->vid,$vids)) $vids[] = $row->vid;
+                    else {
+                      db_query("DELETE from {$table} where $dbfield=%d AND vid=%d AND delta=%d",array($new,$row->vid,$delta->delta));
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    break;
+  }
+}
