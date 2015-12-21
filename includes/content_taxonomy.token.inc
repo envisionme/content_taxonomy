@@ -39,7 +39,7 @@ function content_taxonomy_token_values($type, $object = NULL) {
         $vid = $term->vid;
       }
     }
-    if ($vid) {
+    if (!empty($vid)) {
       $vocabulary = taxonomy_vocabulary_load($vid);
     }
 
@@ -50,7 +50,7 @@ function content_taxonomy_token_values($type, $object = NULL) {
     $tokens['term']  = check_plain($tokens['term-raw']);
     $tokens['tid']   = reset($tids);
     $tokens['vocab'] = isset($vocabulary) ? $vocabulary->name : '';
-    $tokens['vid']   = $vid;
+    $tokens['vid']   = isset($vid) ? $vid: FALSE;
 
     return $tokens;
   }
