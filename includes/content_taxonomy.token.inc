@@ -28,7 +28,8 @@ function content_taxonomy_token_values($type, $object = NULL) {
     $items = $object;
     $terms = array();
     $tids = array();
-    
+    $vid = FALSE;
+
     foreach ($items as $item) {
       $tid = $item['value'];
       if ($tid) {
@@ -45,9 +46,9 @@ function content_taxonomy_token_values($type, $object = NULL) {
     $tokens['terms-raw'] = implode(', ', $terms);
     $tokens['terms'] = check_plain($tokens['terms-raw']);
     $tokens['tids']  = implode(', ', $tids);
-    $tokens['term-raw']  = $terms[0];
+    $tokens['term-raw']  = reset($terms);
     $tokens['term']  = check_plain($tokens['term-raw']);
-    $tokens['tid']   = $tids[0];
+    $tokens['tid']   = reset($tids);
     $tokens['vocab'] = isset($vocabulary) ? $vocabulary->name : '';
     $tokens['vid']   = $vid;
 
