@@ -262,7 +262,7 @@ function content_taxonomy_allowed_values($field) {
     if (is_array($tree)) {
       foreach ($tree as $term) {
         _content_taxonomy_localize_term($term);
-        if ($field['widget']['show_depth']) {
+        if (isset($field['widget']['show_depth']) && $field['widget']['show_depth']) {
           $value = str_repeat(' - ', $term->depth) . $term->name;
         }
         else {
