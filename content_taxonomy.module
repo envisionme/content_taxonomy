@@ -62,20 +62,20 @@ function content_taxonomy_field_settings($op, $field) {
   switch ($op) {
     case 'form':
       $form = array();
-            
+
       $form['save_term_node'] = array(
-        '#type' => 'checkbox', 
+        '#type' => 'checkbox',
         '#title' => t('Save values additionally to the core taxonomy system (into the \'term_node\' table).'),
         '#default_value' => is_numeric($field['save_term_node']) ? $field['save_term_node'] : 0,
-        '#description' => t('If this option is set, saving of terms is additionally handled by the taxonomy module. So saved terms from Content Taxonomy fields will appear as any other terms saved by the core taxonomy module. Set this option if you are using any other taxonomy application, like tagadelic. Otherwise terms are only saved in the cck tables and can only be accessed via the node or a view'), 
+        '#description' => t('If this option is set, saving of terms is additionally handled by the taxonomy module. So saved terms from Content Taxonomy fields will appear as any other terms saved by the core taxonomy module. Set this option if you are using any other taxonomy application, like tagadelic. Otherwise terms are only saved in the cck tables and can only be accessed via the node or a view'),
       );
-      
+
       $options_voc = array();
       foreach (taxonomy_get_vocabularies() as $voc) {
         _content_taxonomy_localize_vocabulary($voc);
         $options_voc[$voc->vid] = $voc->name;
       }
-      
+
       $form['vid'] = array(
         '#title' => t('Vocabulary'),
         '#type' => 'select',
@@ -83,13 +83,13 @@ function content_taxonomy_field_settings($op, $field) {
         '#options' => $options_voc,
         '#description' => t('Terms of the selected vocabulary get exposed to the field'),
       );
-      
+
       $form['hierarchical_vocabulary'] = array(
         '#type' => 'fieldset',
         '#title' => t('Advanced settings for hierarchical vocabularies'),
         '#collapsible' => TRUE,
       );
-      
+
       $form['hierarchical_vocabulary']['parent'] = array(
         '#title' => t('Parent Term'),
         '#type' => 'select',
@@ -117,22 +117,22 @@ function content_taxonomy_field_settings($op, $field) {
         '#default_value' => is_numeric($field['depth']) ? $field['depth'] : '',
         '#description' => t('By setting a numeric value, the depth of the hierarchy shown can be limited. Leave this field blank to show the whole hierarchy.'),
       );
-      
-      
-      return $form;   
-    
+
+
+      return $form;
+
     case 'save':
       return array('save_term_node', 'vid', 'parent', 'parent_php_code', 'depth');
-    
+
     case 'database columns':
       return array(
         'value' => array('type' => 'int', 'not null' => FALSE, 'sortable' => FALSE),
       );
-    
+
     case 'views data':
       $data = content_views_field_views_data($field);
       $table_alias = content_views_tablename($field);
-      
+
       // Add a relation to the taxonomy term table.
       $data[$table_alias][$field['field_name'] .'_value']['relationship'] = array(
         'handler' => 'views_handler_relationship',
@@ -151,18 +151,18 @@ function content_taxonomy_field_settings($op, $field) {
  * Implementation of hook_field().
  */
 function content_taxonomy_field($op, &$node, $field, &$items, $teaser, $page) {
-  switch ($op) {         
+  switch ($op) {
     case 'presave':
       if ($field['save_term_node']) {
         static $_content_taxonomy_array_cleared;
-        if (!is_array($_content_taxonomy_array_cleared) || !$_content_taxonomy_array_cleared[$node->nid][$field['vid']]) {
+        if (!is_array($_content_taxonomy_array_cleared) || !isset($_content_taxonomy_array_cleared[$node->nid][$field['vid']])) {
           _content_taxonomy_taxonomy_unset($node->taxonomy, array($field['vid']));
           $_content_taxonomy_array_cleared[$node->nid][$field['vid']] = TRUE;
         }
-        
+
         foreach ($items as $key => $entry) {
           if ($entry['value']) {
-            if (is_object($node->taxonomy[$entry['value']]) 
+            if (isset($node->taxonomy[$entry['value']]) && is_object($node->taxonomy[$entry['value']])
               || (is_array($node->taxonomy) && in_array($entry['value'], $node->taxonomy))
               || (isset($entry['_remove']) && $entry['_remove'] == 1)) {
               continue;
@@ -181,7 +181,7 @@ function content_taxonomy_field($op, &$node, $field, &$items, $teaser, $page) {
             }
           }
         }
-        // the $node->taxonomy array should never be empty, because in this case the 
+        // the $node->taxonomy array should never be empty, because in this case the
         // taxonomy nodeapi doesn't call taxonomy_node_save which handles removing
         // and inserting of terms
         if (empty($node->taxonomy)) {
@@ -250,7 +250,7 @@ function content_taxonomy_content_is_empty($item, $field) {
  */
 function content_taxonomy_allowed_values($field) {
   $options = array();
-  
+
   //for opt groups call different function
   if (isset($field['widget']['group_parent']) && $field['widget']['group_parent'] > 0) {
     $options = content_taxonomy_allowed_values_groups($field);
@@ -258,7 +258,7 @@ function content_taxonomy_allowed_values($field) {
   else {
     $depth = (is_numeric($field['depth'])) ? $field['depth'] : NULL;
     $tree = taxonomy_get_tree($field['vid'], content_taxonomy_field_get_parent($field), -1, $depth);
-  
+
     if (is_array($tree)) {
       foreach ($tree as $term) {
         _content_taxonomy_localize_term($term);
@@ -273,21 +273,21 @@ function content_taxonomy_allowed_values($field) {
       }
     }
   }
-  
+
   if (($field['widget']['type'] == 'content_taxonomy_select' && !$field['multiple']) || ($field['widget']['type'] == 'content_taxonomy_options' && !$field['multiple'] && !$field['required'])) {
     $options = array('' => theme('content_taxonomy_options_widgets_none', $field)) + $options;
   }
   return $options;
 }
 
-/** 
+/**
  * Creating Opt Groups for content_taxonomy_options
  */
 function content_taxonomy_allowed_values_groups($field) {
   $options = array();
   $parent = content_taxonomy_field_get_parent($field);
   $group_parent = $field['widget']['group_parent'];
-  
+
   //if children in no group
   $default_terms = taxonomy_get_children($parent, $field['vid']);
   foreach ($default_terms as $default_term) {
@@ -330,7 +330,7 @@ function content_taxonomy_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']['#value']) && $form['type']['#value'] .'_node_form' == $form_id) {
     if (!isset($form['taxonomy']) || !is_array($form['taxonomy'])) {
       // empty taxonomy arrays can cause errors on preview
-      if (isset($form_state['post']) && $form_state['post']['op'] == t('Preview')) {
+      if (isset($form_state['post']['op']) && $form_state['post']['op'] == t('Preview')) {
         $form['taxonomy'] = array('#tree' => TRUE);
         $form['taxonomy']['key'] = array('#type' => 'value', '#value' => '');
         return;
@@ -345,13 +345,13 @@ function content_taxonomy_form_alter(&$form, $form_state, $form_id) {
       }
     }
     _content_taxonomy_taxonomy_unset($form['taxonomy'], $_content_taxonomy_vids);
-    
+
     //hide empty 'Vocabularies' fieldsets
     $empty_fieldset = TRUE;
     if (is_array($form['taxonomy'])) {
       foreach ($form['taxonomy'] as $key => $value) {
         if (is_array($value) && !empty($value)) {
-          $empty_fieldset = FALSE; 
+          $empty_fieldset = FALSE;
           break;
         }
       }
@@ -423,7 +423,7 @@ function content_taxonomy_views_api() {
  */
 function content_taxonomy_fields() {
   static $ct_fields;
-  
+
   if (!is_array($ct_fields)) {
     $ct_fields = array();
     foreach (content_types() as $type_name => $type) {
@@ -438,7 +438,7 @@ function content_taxonomy_fields() {
 }
 
 
-/** 
+/**
  * Helper functions that returns all terms group by their vocabulary
  *
  * needed for some settings forms
@@ -452,7 +452,7 @@ function _content_taxonomy_get_all_terms() {
         _content_taxonomy_localize_term($term);
         $options[$voc->name][$term->tid] = str_repeat('- ', $term->depth) . $term->name;
       }
-    } 
+    }
   }
   return $options;
 }
@@ -489,7 +489,7 @@ function _content_taxonomy_localize_vocabulary(&$vocabulary) {
 
 /**
  * carefully unsets node or node form taxonomy items
- * 
+ *
  *
  * @param $form the node or node form's taxonomy selections. nodes are objects and forms are arrays, so only the actual taxonomy value or property is passed
  * @param $vids an array containing a list of vocabulary IDs whose terms should be unset
@@ -533,7 +533,7 @@ function content_taxonomy_content_diff_values($node, $field, $items) {
   foreach ($items as $item) {
     if (isset($item['value']) && is_numeric($item['value'])) {
       $term = taxonomy_get_term($item['value']);
-      $return[] = $term->name; 
+      $return[] = $term->name;
     }
   }
   return $return;

@@ -152,7 +152,9 @@ function content_taxonomy_autocomplete_value($element, $edit = FALSE) {
   $terms = array();
   if (count($element['#default_value'])) {
     foreach ($element['#default_value'] as $delta => $entry) {
-      $terms[] = taxonomy_get_term($entry[$field_key]);
+      if ($entry[$field_key]) {
+        $terms[] = taxonomy_get_term($entry[$field_key]);
+      }
     }
   }
   $value = content_taxonomy_autocomplete_merge_tags($terms, $element['#vid']);
@@ -243,9 +245,9 @@ function content_taxonomy_autocomplete_validate($element, &$form_state) {
  * to the format to be stored in the field
  */
 function content_taxonomy_autocomplete_form2data($extracted_ids, $field, $element) {
-  $existing_tids = is_array($extracted_ids['existing_tids']) ? $extracted_ids['existing_tids'] : array();
+  $existing_tids = isset($extracted_ids['existing_tids']) && is_array($extracted_ids['existing_tids']) ? $extracted_ids['existing_tids'] : array();
   $new_tids = array();
-  if (is_array($extracted_ids['non_existing_terms'])) {
+  if (isset($extracted_ids['non_existing_terms']) && is_array($extracted_ids['non_existing_terms'])) {
     if ($field['widget']['extra_parent']) {
       $new_tids = content_taxonomy_autocomplete_insert_tags($extracted_ids['non_existing_terms'], $field['widget']['extra_parent']);
     }
