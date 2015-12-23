@@ -161,16 +161,18 @@ function content_taxonomy_field($op, &$node, $field, &$items, $teaser, $page) {
         }
 
         foreach ($items as $key => $entry) {
-          if ($entry['value']) {
+          if (isset($entry['value'])) {
             if (isset($node->taxonomy[$entry['value']]) && is_object($node->taxonomy[$entry['value']])
               || (is_array($node->taxonomy) && in_array($entry['value'], $node->taxonomy))
               || (isset($entry['_remove']) && $entry['_remove'] == 1)) {
               continue;
             }
-            elseif (is_array($node->taxonomy[$field['vid']])) {
+            elseif (isset($node->taxonomy[$field['vid']]) && is_array($node->taxonomy[$field['vid']])) {
               if (!in_array($entry['value'], $node->taxonomy[$field['vid']])) {
                 $node->taxonomy[$field['vid']][] = $entry['value'];
               }
+            } elseif (is_array($node->taxonomy) && in_array($entry['value'],$node->taxonomy)) {
+              continue;
             }
             // when saving an existing node without presenting a form to the user,
             // the terms are objects keyed by tid. there's no need to re-set these
@@ -499,7 +501,7 @@ function _content_taxonomy_taxonomy_unset(&$form, $vids) {
     return;
   }
   foreach ($form as $key => $value) {
-    if ($key == 'tags') {
+    if ($key === 'tags') {
       _content_taxonomy_taxonomy_unset($form[$key], $vids);
     }
     elseif (is_object($value) && in_array($value->vid, $vids)) {
